@@ -8,7 +8,7 @@ async function createBooking(req,res){
       const response = await BookingService.createBooking({
         flightId: req.body.flightId,
         userId: req.body.userId,
-        noOfSeats: req.body.noOfSeats
+        noOfSeat: req.body.noOfSeat
       }
       )
       SuccessResponse.message = "Successfully completed the booking in the Flight.";

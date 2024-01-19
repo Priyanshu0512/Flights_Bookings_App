@@ -15,15 +15,15 @@ async function createBooking(data) {
     try {
         const flight = await axios.get(`${ServerConfig.FLIGHT_SERVICE}/api/v1/flights/${data.flightId}`);
         const flightData = flight.data.data;
-        if(data.noOfSeats > flightData.totalSeats) {
+        if(data.noOfSeat > flightData.totalSeats) {
             throw new AppError('Not enough seats available', StatusCodes.BAD_REQUEST);
         }
-        const totalBillingAmount = data.noOfSeats * flightData.price;
+        const totalBillingAmount = data.noOfSeat * flightData.price;
         const bookingPayload = {...data, totalCost: totalBillingAmount};
         const booking = await bookingRepository.create(bookingPayload, transaction);
 
         await axios.patch(`${ServerConfig.FLIGHT_SERVICE}/api/v1/flights/${data.flightId}/seats`, {
-            seats: data.noOfSeats
+            seats: data.noOfSeat
         });
 
         await transaction.commit();
@@ -35,7 +35,6 @@ async function createBooking(data) {
     
 }
 
-
 async function makePayment(data){
    const transaction = await db.sequelize.transaction();
    try {
@@ -46,7 +45,7 @@ async function makePayment(data){
         throw new AppError('Booking session has expired',StatusCodes.BAD_REQUEST);
       }
       if(currentTime - bookingTime > 300000){
-        const response = await bookingRepository.update(data.bookingId,{status: CANCELLED}, {transaction: transaction});
+        await cancelBooking(data.bookingId);
         throw new AppError('Booking session has expired.',StatusCodes.BAD_REQUEST);
       }
       if(bookingDetails.totalCost != data.totalCost){
@@ -64,6 +63,30 @@ async function makePayment(data){
       
    }
 }
+
+
+async function cancelBooking(bookingId){
+    const transaction = await db.sequelize.transaction();
+    try {
+        console.log("hi");
+        const bookingDetails = await bookingRepository.get(bookingId,transaction);
+        console.log(bookingDetails);
+        if(bookingDetails.status == CANCELLED){
+            await transaction.commit();
+            return true;
+        }
+        await axios.patch(`${ServerConfig.FLIGHT_SERVICE}/api/v1/flights/${bookingDetails.flightId}/seats`, {
+            seats: bookingDetails.noOfSeat,
+            dec: 0
+        });
+        await bookingRepository.update(bookingId,{status: CANCELLED}, {transaction: transaction});
+        await transaction.commit();
+    } catch (error) {
+        await transaction.rollback();
+        throw error;     
+    }
+}
+
 
 
 module.exports ={
