@@ -5,14 +5,37 @@ const {StatusCodes} = require('http-status-codes')
 
 async function createBooking(req,res){
     try {
-      const flight = await BookingService.createBooking({
+      const response = await BookingService.createBooking({
         flightId: req.body.flightId,
         userId: req.body.userId,
         noOfSeats: req.body.noOfSeats
       }
       )
       SuccessResponse.message = "Successfully completed the booking in the Flight.";
-      SuccessResponse.data= flight;
+      SuccessResponse.data= response;
+      return res
+       .status(StatusCodes.OK)
+       .json(SuccessResponse);
+    } catch (error) {
+      ErrorResponse.message = "Something went wrong";
+      ErrorResponse.error = error;
+      return res
+       .status(error.statusCode)
+       .json(ErrorResponse);
+    }
+  }
+
+
+  async function makePayment(req,res){
+    try {
+      const response = await BookingService.makePayment({
+        totalCost: req.body.totalCost,
+        bookingId: req.body.bookingId,
+        userId: req.body.userId
+      }
+      )
+      SuccessResponse.message = "Successfully completed the payment for the booking.";
+      SuccessResponse.data= response;
       return res
        .status(StatusCodes.OK)
        .json(SuccessResponse);
@@ -26,6 +49,7 @@ async function createBooking(req,res){
   }
 
 module.exports={
-    createBooking
+    createBooking,
+    makePayment
 
 }
