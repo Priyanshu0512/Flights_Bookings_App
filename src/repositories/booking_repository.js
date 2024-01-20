@@ -1,7 +1,9 @@
 const CrudRepository = require('./crud_repository');
 const {Booking} = require('../models');
 const { transport } = require('winston');
-
+const { Op } = require("sequelize");
+const {Enums} =require('../utils/common');
+const {BOOKED, CANCELLED} = Enums.BOOKING_STATUS;
 
 class BookingRepository extends CrudRepository{
     constructor(){
@@ -21,7 +23,7 @@ class BookingRepository extends CrudRepository{
         return response;
     }
     async update(id , data, transaction){
-        const  response= await this.model.update(data,{
+        const  response= await Booking.update(data,{
             where: {
                 id: id
             }
@@ -29,6 +31,31 @@ class BookingRepository extends CrudRepository{
         if(!response[0]){
             throw new AppError("Cannot find the resource",StatusCodes.NOT_FOUND);
         }
+        return response;
+    }
+
+    async cancelOldBookings(timeStamp){
+        const response = await Booking.update({status: CANCELLED},{
+            where: {
+                [Op.and]:[
+                    {
+                        createdAt: {
+                            [Op.lt] : timeStamp
+                        }
+                    },
+                    {
+                        status:{
+                            [Op.ne]: BOOKED
+                        }
+                    },
+                    {
+                        status:{
+                            [Op.ne]: CANCELLED
+                        }
+                    }
+                ]
+            }
+        });
         return response;
     }
 }
